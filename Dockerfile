@@ -18,6 +18,17 @@ RUN export DEBIAN_FRONTEND=noninteractive \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
+
+# Add Multibyte Language Support
+RUN apt-get update && apt-get install -y \
+  locales locales-all \
+  fonts-noto fonts-noto-cjk \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* \
+  && locale-gen \
+  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/
+
+
 COPY --from=build /src/gowitness /usr/local/bin
 
 EXPOSE 7171

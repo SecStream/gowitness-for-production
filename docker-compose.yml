@@ -39,3 +39,14 @@ services:
       # use `htpasswd` to get a hash for a different password. also note you need to escape $ with another $ to $$'s
       traefik.http.middlewares.basic-auth.basicauth.users: gowitness:$$2y$$05$$7ADiPfM1kMABSUjofyUTOuJ7U6RcGi5fXeecyYnxjYwRluRRIO1..
       traefik.http.middlewares.basic-auth.basicauth.realm: gowitness
+  db:
+    image: postgres:14
+    container_name: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./db-store:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=amnesia
+      - POSTGRES_PASSWORD=amnesia
+      - POSTGRES_DB=amnesia

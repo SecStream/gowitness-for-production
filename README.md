@@ -6,12 +6,18 @@
 </h1>
 
 <h4 align="center">A golang, web screenshot utility using Chrome Headless.</h4>
-<p align="center">
-  <a href="https://twitter.com/leonjza"><img src="https://img.shields.io/badge/twitter-%40leonjza-blue.svg" alt="@leonjza" height="18"></a>
-  <a href="https://goreportcard.com/report/github.com/sensepost/gowitness"><img src="https://goreportcard.com/badge/github.com/sensepost/gowitness" alt="Go Report Card" height="18"></a>
-  <a href="https://github.com/sensepost/gowitness/actions/workflows/docker.yml"><img alt="Docker build & Push" src="https://github.com/sensepost/gowitness/actions/workflows/docker.yml/badge.svg"></a>
-</p>
-<br>
+
+- This is clone repository. see author repo https://github.com/sensepost/gowitness
+
+
+## Getting Started
+```bash
+docker build -t SecStream/gowitness .
+docker run -d --rm -v $(pwd):/data -p7171:7171 SecStream/gowitness gowitness report serve --address :7171 --fullpage --delay 20 -t 1 --db-path postgresql://amnesia:amnesia@127.0.0.1:5432
+```
+Go http://127.0.0.1:7171
+
+
 
 ## introduction
 
