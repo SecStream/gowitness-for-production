@@ -9,7 +9,7 @@ services:
       - ./gowitness.sqlite3:/data/gowitness.sqlite3
       - ./screenshots:/data/screenshots
     environment:
-      - SENTRY_DSN=https://982c2f1e589842b997a9e924a34789c0@o4504501867315200.ingest.sentry.io/4504847109586944
+      - SENTRY_DSN=
     labels:
       traefik.enable: true
       traefik.http.routers.gowitness.rule: Host(`gowitness.local`)
