@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"github.com/getsentry/sentry-go"
 	"image/png"
 	"io/ioutil"
 	"net/url"
@@ -34,41 +35,47 @@ type Processor struct {
 	screenshotResult *chrome.ScreenshotResult
 
 	// persistence id
-	urlid uint
+	urlid  uint
+	UUIDv4 string
 }
 
 // Gowitness processes a URL by:
-//	- preflighting
-//	- storing
-//	- screenshotting
-//	- calculating a perception hash
-//	- writing a screenshot to disk
+//   - preflighting
+//   - storing
+//   - screenshotting
+//   - calculating a perception hash
+//   - writing a screenshot to disk
 func (p *Processor) Gowitness() (err error) {
 
 	p.init()
 
 	if err = p.preflight(); err != nil {
 		log.Error().Err(err).Msg("preflight request failed")
+		sentry.CaptureException(err)
 		return
 	}
 
 	if err = p.takeScreenshot(); err != nil {
 		log.Error().Err(err).Msg("failed to take screenshot")
+		sentry.CaptureException(err)
 		return
 	}
 
 	if err = p.persistRequest(); err != nil {
 		log.Error().Err(err).Msg("failed to store request information")
+		sentry.CaptureException(err)
 		return
 	}
 
 	if err = p.storePerceptionHash(); err != nil {
 		log.Error().Err(err).Msg("failed to calculate and save a perception hash")
+		sentry.CaptureException(err)
 		return
 	}
 
 	if err = p.writeScreenshot(); err != nil {
 		log.Error().Err(err).Msg("failed to save screenshot buffer")
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -125,7 +132,7 @@ func (p *Processor) persistRequest() (err error) {
 	}
 
 	p.Logger.Debug().Str("url", p.URL.String()).Msg("storing request data")
-	if p.urlid, err = p.Chrome.StoreRequest(p.Db, p.preflightResult, p.screenshotResult, p.fn); err != nil {
+	if p.urlid, err = p.Chrome.StoreRequest(p.Db, p.preflightResult, p.screenshotResult, p.fn, chrome.StoreWithUUIdv4(p.UUIDv4)); err != nil {
 		return
 	}
 

@@ -4,7 +4,7 @@ G := $(shell go version | cut -d' ' -f 3,4 | sed 's/ /_/g')
 V := $(shell git rev-parse --short HEAD)
 APPVER := $(shell grep 'version =' cmd/version.go | cut -d \" -f2)
 PWD := $(shell pwd)
-LD_FLAGS := -ldflags="-s -w -X=github.com/sensepost/gowitness/cmd.gitHash=$(V) -X=github.com/sensepost/gowitness/cmd.goVer=$(G)"
+LD_FLAGS := -ldflags="-s -w -extldflags \"-static\" -X=github.com/sensepost/gowitness/cmd.gitHash=$(V) -X=github.com/sensepost/gowitness/cmd.goVer=$(G)"
 BIN_DIR := build
 DOCKER_GO_VER := 1.19# https://github.com/elastic/golang-crossbuild
 DOCKER_RELEASE_BUILD_CMD := docker run --rm -it -v $(PWD):/go/src/github.com/sensepost/gowitness \

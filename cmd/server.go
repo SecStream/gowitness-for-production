@@ -2,11 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/getsentry/sentry-go"
+	sentrygin "github.com/getsentry/sentry-go/gin"
+	"github.com/google/uuid"
 	"html/template"
 	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 
@@ -86,8 +90,27 @@ $ gowitness server --address 127.0.0.1:9000 --allow-insecure-uri`,
 			gin.SetMode(gin.ReleaseMode)
 		}
 
+		// To initialize Sentry's handler, you need to initialize Sentry itself beforehand
+		if err := sentry.Init(sentry.ClientOptions{
+			Dsn:           os.Getenv("SENTRY_DSN"),
+			EnableTracing: false,
+			// Set TracesSampleRate to 1.0 to capture 100%
+			// of transactions for performance monitoring.
+			// We recommend adjusting this value in production,
+			TracesSampleRate: 0,
+		}); err != nil {
+			log.Warn().Msgf("Sentry initialization failed: %v\n", err)
+		}
+
 		r := gin.Default()
 		r.Use(themeChooser(&theme))
+		r.Use(sentrygin.New(sentrygin.Options{
+			Repanic: true,
+		}))
+
+		log.Info().Msg("Sending Test Sentry")
+		var id = sentry.CaptureMessage("Gowitness Started")
+		log.Info().Msg("EventId: " + string(*id))
 
 		// add / suffix to the base url so that we can be certain about
 		// the trim in the template helper
@@ -265,6 +288,7 @@ func submitHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -287,6 +311,7 @@ func submitHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -296,6 +321,7 @@ func submitHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -306,6 +332,7 @@ func submitHandler(c *gin.Context) {
 				"status":  "error",
 				"message": err.Error(),
 			})
+			sentry.CaptureException(err)
 			return
 		}
 	}
@@ -315,6 +342,7 @@ func submitHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -335,6 +363,7 @@ func detailHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -384,6 +413,7 @@ func detailDOMDownloadHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -393,6 +423,7 @@ func detailDOMDownloadHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -420,6 +451,7 @@ func galleryHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -441,6 +473,7 @@ func galleryHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -620,6 +653,7 @@ func apiDetailScreenshotHandler(c *gin.Context) {
 			"stauts": "errir",
 			"error":  err.Error(),
 		})
+		sentry.CaptureException(err)
 	}
 
 	c.Data(http.StatusOK, "image/png", screenshot)
@@ -633,6 +667,7 @@ func apiScreenshotHandler(c *gin.Context) {
 		Headers []string `json:"headers"`
 		// set oneshot to "true" if you just want to see the screenshot, and not add it to the report
 		OneShot string `json:"oneshot"`
+		UUIDv4  string `json:uuidv4`
 	}
 
 	var requestData Request
@@ -641,6 +676,7 @@ func apiScreenshotHandler(c *gin.Context) {
 			"status": "error",
 			"error":  err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -650,6 +686,7 @@ func apiScreenshotHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -661,6 +698,11 @@ func apiScreenshotHandler(c *gin.Context) {
 			})
 			return
 		}
+	}
+
+	uuidv4, err := uuid.Parse(requestData.UUIDv4)
+	if err != nil {
+		uuidv4 = uuid.New()
 	}
 
 	// prepare request headers
@@ -690,6 +732,7 @@ func apiScreenshotHandler(c *gin.Context) {
 			"status":  "error",
 			"message": err.Error(),
 		})
+		sentry.CaptureException(err)
 		return
 	}
 
@@ -700,6 +743,7 @@ func apiScreenshotHandler(c *gin.Context) {
 			Chrome:         chrm,
 			URL:            u,
 			ScreenshotPath: options.ScreenshotPath,
+			UUIDv4:         uuidv4.String(),
 		}
 
 		p.Gowitness()

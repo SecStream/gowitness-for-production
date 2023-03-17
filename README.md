@@ -7,16 +7,22 @@
 
 <h4 align="center">A golang, web screenshot utility using Chrome Headless.</h4>
 
-- This is clone repository. see author repo https://github.com/sensepost/gowitness
+### This is clone repository. see author repo https://github.com/sensepost/gowitness
 
+
+---
 
 ## Getting Started
 ```bash
-docker build -t SecStream/gowitness .
-docker run -d --rm -v $(pwd):/data -p7171:7171 SecStream/gowitness gowitness report serve --address :7171 --fullpage --delay 20 -t 1 --db-path postgresql://amnesia:amnesia@127.0.0.1:5432
+make docker-image
+docker compose up -d
+Open https://gowitness.local
 ```
-Go http://127.0.0.1:7171
 
+## Dev
+```
+gowiness report serve --address :7171 --fullpage --timeout 30 --delay 5 -t 1 --db-path postgresql://amnesia:amnesia@127.0.0.1:5432
+```
 
 
 ## introduction

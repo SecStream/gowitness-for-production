@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
+	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"net/url"
@@ -154,18 +155,33 @@ func (chrome *Chrome) Preflight(url *url.URL) (result *PreflightResult, err erro
 	return
 }
 
+type StoreRequestOptions struct {
+	UUIDv4 string
+}
+type StoreRequestOption func(options *StoreRequestOptions)
+
+func StoreWithUUIdv4(UUIDv4 string) StoreRequestOption {
+	return func(options *StoreRequestOptions) {
+		options.UUIDv4 = UUIDv4
+	}
+}
+
 // StoreRequest will store request info to the DB
-func (chrome *Chrome) StoreRequest(db *gorm.DB, preflight *PreflightResult, screenshot *ScreenshotResult, filename string) (uint, error) {
+func (chrome *Chrome) StoreRequest(db *gorm.DB, preflight *PreflightResult, screenshot *ScreenshotResult, filename string, options ...StoreRequestOption) (uint, error) {
+	opt := StoreRequestOptions{}
+	for _, o := range options {
+		o(&opt)
+	}
 
 	record := &storage.URL{
 		URL:            preflight.URL.String(),
-		DOM:            screenshot.DOM,
+		DOM:            base64.StdEncoding.EncodeToString([]byte(screenshot.DOM)),
 		FinalURL:       preflight.HTTPResponse.Request.URL.String(),
 		ResponseCode:   preflight.HTTPResponse.StatusCode,
 		ResponseReason: preflight.HTTPResponse.Status,
 		Proto:          preflight.HTTPResponse.Proto,
 		ContentLength:  preflight.HTTPResponse.ContentLength,
-		Title:          preflight.HTTPTitle,
+		Title:          base64.StdEncoding.EncodeToString([]byte(preflight.HTTPTitle)),
 		Filename:       filename,
 		IsPDF:          chrome.AsPDF,
 		Screenshot:     base64.StdEncoding.EncodeToString(screenshot.Screenshot),
@@ -225,6 +241,10 @@ func (chrome *Chrome) StoreRequest(db *gorm.DB, preflight *PreflightResult, scre
 		})
 	}
 
+	if opt.UUIDv4 == "" {
+		opt.UUIDv4 = uuid.New().String()
+	}
+	record.UUIDv4 = opt.UUIDv4
 	db.Create(record)
 	return record.ID, nil
 }

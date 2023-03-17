@@ -24,6 +24,7 @@ type URL struct {
 	PerceptionHash string
 	DOM            string
 	Screenshot     string
+	UUIDv4         string
 
 	TLS TLS
 
