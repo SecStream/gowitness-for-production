@@ -155,6 +155,7 @@ $ gowitness server --address 127.0.0.1:9000 --allow-insecure-uri`,
 			api.GET("/list", apiURLHandler)
 			api.GET("/search", apiSearchHandler)
 			api.GET("/detail/:id", apiDetailHandler)
+			api.GET("/status/:uuid", apiStatusHandler)
 			api.GET("/detail/:id/screenshot", apiDetailScreenshotHandler)
 			api.POST("/screenshot", apiScreenshotHandler)
 		}
@@ -623,6 +624,19 @@ func apiDetailHandler(c *gin.Context) {
 		Preload("Console").
 		Preload("Network").
 		First(&url, c.Param("id"))
+
+	if url.ID == 0 {
+		c.JSON(http.StatusNotFound, nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, url)
+}
+
+func apiStatusHandler(c *gin.Context) {
+
+	var url storage.URL
+	rsDB.Select("id").Where(&storage.URL{UUIDv4: c.Param("uuid")}).First(&url)
 
 	if url.ID == 0 {
 		c.JSON(http.StatusNotFound, nil)
