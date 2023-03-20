@@ -109,10 +109,6 @@ $ gowitness server --address 127.0.0.1:9000 --allow-insecure-uri`,
 			Repanic: true,
 		}))
 
-		log.Info().Msg("Sending Test Sentry")
-		var id = sentry.CaptureMessage("Gowitness Started")
-		log.Info().Msg("EventId: " + string(*id))
-
 		// add / suffix to the base url so that we can be certain about
 		// the trim in the template helper
 		if !strings.HasSuffix(options.BasePath, "/") {
