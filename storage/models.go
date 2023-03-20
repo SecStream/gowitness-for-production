@@ -168,12 +168,13 @@ type NetworkLog struct {
 
 	URLID uint
 
-	RequestID   string
-	RequestType RequestType
-	StatusCode  int64
-	URL         string
-	FinalURL    string
-	IP          string
-	Time        time.Time
-	Error       string
+	RequestID    string
+	RequestType  RequestType
+	StatusCode   int64
+	URL          string
+	FinalURL     string
+	IP           string
+	Time         time.Time
+	Error        string
+	ResponseBody string
 }

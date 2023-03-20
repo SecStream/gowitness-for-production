@@ -5,11 +5,13 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/google/uuid"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chromedp/cdproto/inspector"
@@ -52,14 +54,20 @@ type ConsoleLog struct {
 type NetworkLog struct {
 	URLID uint
 
-	RequestID   string
-	Time        time.Time
-	RequestType storage.RequestType
-	StatusCode  int64
-	URL         string
-	FinalURL    string // may differ from URL if there were redirects
-	IP          string
-	Error       string
+	RequestID    string
+	Time         time.Time
+	RequestType  storage.RequestType
+	StatusCode   int64
+	URL          string
+	FinalURL     string // may differ from URL if there were redirects
+	IP           string
+	Error        string
+	ResponseBody string
+}
+
+type ResponseBody struct {
+	RequestID    string
+	ResponseBody string
 }
 
 // PreflightResult contains the results of a preflight run
@@ -230,14 +238,15 @@ func (chrome *Chrome) StoreRequest(db *gorm.DB, preflight *PreflightResult, scre
 	// add network logs
 	for _, log := range screenshot.NetworkLog {
 		record.Network = append(record.Network, storage.NetworkLog{
-			RequestID:   log.RequestID,
-			Time:        log.Time,
-			RequestType: log.RequestType,
-			StatusCode:  log.StatusCode,
-			URL:         log.URL,
-			FinalURL:    log.FinalURL,
-			IP:          log.IP,
-			Error:       log.Error,
+			RequestID:    log.RequestID,
+			Time:         log.Time,
+			RequestType:  log.RequestType,
+			StatusCode:   log.StatusCode,
+			URL:          log.URL,
+			FinalURL:     log.FinalURL,
+			IP:           log.IP,
+			Error:        log.Error,
+			ResponseBody: base64.StdEncoding.EncodeToString([]byte(log.ResponseBody)),
 		})
 	}
 
@@ -346,6 +355,8 @@ func (chrome *Chrome) Screenshot(url *url.URL) (result *ScreenshotResult, err er
 	// keep a keyed reference so we can map network logs to requestid's and
 	// update them as responses are received
 	networkLog := make(map[string]NetworkLog)
+	responseBodyChan := make(chan ResponseBody)
+	wg := new(sync.WaitGroup)
 
 	// log network events
 	chromedp.ListenTarget(tabCtx, func(ev interface{}) {
@@ -365,8 +376,34 @@ func (chrome *Chrome) Screenshot(url *url.URL) (result *ScreenshotResult, err er
 				entry.StatusCode = ev.Response.Status
 				entry.FinalURL = ev.Response.URL
 				entry.IP = ev.Response.RemoteIPAddress
-
 				networkLog[string(ev.RequestID)] = entry
+
+				// https://github.com/chromedp/chromedp/issues/543#issue-542151744
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					// print response body
+					c := chromedp.FromContext(tabCtx)
+					rbp := network.GetResponseBody(ev.RequestID)
+					body, err := rbp.Do(cdp.WithExecutor(tabCtx, c.Target))
+
+					responseBodyResult := ResponseBody{}
+
+					if err != nil {
+						responseBodyResult = ResponseBody{
+							RequestID:    string(ev.RequestID),
+							ResponseBody: "",
+						}
+					} else {
+						responseBodyResult = ResponseBody{
+							RequestID:    string(ev.RequestID),
+							ResponseBody: string(body),
+						}
+					}
+
+					responseBodyChan <- responseBodyResult
+				}()
+
 			}
 		case *network.EventLoadingFailed:
 			// update the network map with the error experienced
@@ -429,6 +466,20 @@ func (chrome *Chrome) Screenshot(url *url.URL) (result *ScreenshotResult, err er
 
 	// close the tab so that we dont receive more network events
 	cancelTabCtx()
+
+	go func() {
+		wg.Wait()
+		close(responseBodyChan)
+	}()
+
+	for r := range responseBodyChan {
+		if r.ResponseBody == "" {
+			continue
+		}
+		n := networkLog[r.RequestID]
+		n.ResponseBody = r.ResponseBody
+		networkLog[r.RequestID] = n
+	}
 
 	// append the networklog
 	for _, log := range networkLog {

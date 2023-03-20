@@ -23,6 +23,7 @@ RUN export DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y \
   locales locales-all \
   fonts-noto fonts-noto-cjk \
+  apt-transport-https curl ca-certificates \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
   && locale-gen \

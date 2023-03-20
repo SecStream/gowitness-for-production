@@ -94,6 +94,7 @@ $ gowitness server --address 127.0.0.1:9000 --allow-insecure-uri`,
 		if err := sentry.Init(sentry.ClientOptions{
 			Dsn:           os.Getenv("SENTRY_DSN"),
 			EnableTracing: false,
+			Environment:   os.Getenv("SENTRY_ENV"),
 			// Set TracesSampleRate to 1.0 to capture 100%
 			// of transactions for performance monitoring.
 			// We recommend adjusting this value in production,
